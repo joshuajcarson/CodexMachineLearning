@@ -9,20 +9,44 @@ loadAllCards <- function() {
   allCardData
 }
 
-dealCardRandomly <- function(selectedPlayer, currentGame) {
+#TODO Add error handling, ie move discard to deck, when numCards is greater than num of cards in deck
+dealCardRandomly <- function(selectedPlayer, currentGame, numCards = 1) {
   targettedRows <- which(currentGame$player == selectedPlayer & currentGame$current_zone == 'deck')
-  randomRow <- floor(runif(1, min=1, max=nrow(currentGame[targettedRows]) + 1))
-  currentGame[targettedRows[randomRow]]$current_zone <- 'hand'
+  currentGame[sample(targettedRows, size=numCards)]$current_zone <- 'hand'
   currentGame
 }
 
-getBaseColorFromSpec<- function(playerSpec) {
+getBaseColorFromSpec <- function(playerSpec) {
   specToColor$Color[which(specToColor$Spec == playerSpec)]
 }
 
+getDefaultBuildings <- function(allCardData) {
+  techBuildings <- allCardData[which(allCardData$type == 'Tech Building' | allCardData$type == 'Add-on Building')]
+  techBuildings[which(techBuildings$name == 'Base')]$current_zone <- 'active'
+  techBuildings
+}
+
+getCardsIncludingStarterForSpec <- function(playerSpec, allCardData) {
+  starterDeck <- which(allCardData$starting_zone == 'deck' & allCardData$color == getBaseColorFromSpec(playerSpec))
+  starterCodex <- which(allCardData$starting_zone == 'codex' & allCardData$spec == playerSpec)
+  starterHero <- which(allCardData$type == 'Hero' & allCardData$spec == playerSpec)
+  rbind(allCardData[starterDeck], allCardData[starterHero], allCardData[starterCodex], allCardData[starterCodex])
+}
+
 initBoardForOneVsOneGame <- function(playerOneSpec, playerTwoSpec, allCardData) {
-  starter1 <- allCardData[which(allCardData$starting_zone == 'deck' & allCardData$color == getBaseColorFromSpec(playerOneSpec))]
-  starter2 <- allCardData[which(allCardData$starting_zone == 'deck' & allCardData$color == getBaseColorFromSpec(playerTwoSpec))]
+  techBuildings <- getDefaultBuildings(allCardData)
+  
+  starter1 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerOneSpec, allCardData))
+  starter2 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerTwoSpec, allCardData))
+  
   starter1$player = '1'
   starter2$player = '2'
+  
+  rbind(starter1, starter2)
+}
+
+#only valid for two player games
+dealFirstFiveCardsToPlayers <- function(currentGame) {
+  currentGame <- dealCardRandomly(1, currentGame, 5)
+  currentGame <- dealCardRandomly(2, currentGame, 5)
 }
