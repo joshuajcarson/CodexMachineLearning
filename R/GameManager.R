@@ -26,23 +26,37 @@ getDefaultBuildings <- function(allCardData) {
   techBuildings
 }
 
-getCardsIncludingStarterForSpec <- function(playerSpec, allCardData) {
-  starterDeck <- which(allCardData$starting_zone == 'deck' & allCardData$color == getBaseColorFromSpec(playerSpec))
-  starterCodex <- which(allCardData$starting_zone == 'codex' & allCardData$spec == playerSpec)
-  starterHero <- which(allCardData$type == 'Hero' & allCardData$spec == playerSpec)
-  rbind(allCardData[starterDeck], allCardData[starterHero], allCardData[starterCodex], allCardData[starterCodex])
+getCardsIncludingStarterForSpec <- function(playerSpec, allCardData, numOfWorkers) {
+  starterDeck <- allCardData[which(allCardData$starting_zone == 'deck' & allCardData$color == getBaseColorFromSpec(playerSpec))]
+  starterCodex <- allCardData[which(allCardData$starting_zone == 'codex' & allCardData$spec == playerSpec)]
+  starterHero <- allCardData[which(allCardData$type == 'Hero' & allCardData$spec == playerSpec)]
+  starterWorkers <- allCardData[which(allCardData$type == 'Worker')[1:numOfWorkers]]
+  rbind(starterDeck, starterHero, starterCodex, starterCodex, starterWorkers)
+}
+
+initGameState <- function(numPlayers) {
+  gameStates <- data.frame(name=character(), starting_zone=character(), current_zone=character(), player=integer(), type=character(), cost=integer(), stringsAsFactors = FALSE)
+  for(i in 1:numPlayers) {
+    gameStates[nrow(gameStates)+1,] <- c('gold', 'currentGold', 'currentGold', i, 'gameState', 0)
+  }
+  gameStates[nrow(gameStates)+1,] <- c('currentPlayer', 'currentPlayer', 'currentPlayer', 1, 'gameState', NA)
+  gameStates[nrow(gameStates)+1,] <- c('currentTurn', 'currentTurn', 'currentTurn', NA, 'gameState', 1)
+  gameStates[nrow(gameStates)+1,] <- c('currentPhase', 'gameStart', 'gameStart', NA, 'gameState', 1)
+  gameStates
 }
 
 initBoardForOneVsOneGame <- function(playerOneSpec, playerTwoSpec, allCardData) {
   techBuildings <- getDefaultBuildings(allCardData)
   
-  starter1 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerOneSpec, allCardData))
-  starter2 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerTwoSpec, allCardData))
+  starter1 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerOneSpec, allCardData, 4))
+  starter2 <- rbind(techBuildings, getCardsIncludingStarterForSpec(playerTwoSpec, allCardData, 5))
   
   starter1$player = '1'
   starter2$player = '2'
   
-  rbind(starter1, starter2)
+  currentGame <- rbind(starter1, starter2, initGameState(2), fill=TRUE)
+  currentGame$summoning_sickness = NA
+  currentGame
 }
 
 #only valid for two player games
