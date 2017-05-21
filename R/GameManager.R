@@ -9,10 +9,23 @@ loadAllCards <- function() {
   allCardData
 }
 
-#TODO Add error handling, ie move discard to deck, when numCards is greater than num of cards in deck
 dealCardRandomly <- function(selectedPlayer, currentGame, numCards = 1) {
   targettedRows <- which(currentGame$player == selectedPlayer & currentGame$current_zone == 'deck')
-  currentGame[sample(targettedRows, size=numCards)]$current_zone <- 'hand'
+  if(length(targettedRows) < numCards) {
+    currentGame <- dealCardRandomly(selectedPlayer, currentGame, length(targettedRows))
+    currentGame <- shuffleDiscardIntoDeck(selectedPlayer, currentGame)
+    newTargettedRows <- which(currentGame$player == selectedPlayer & currentGame$current_zone == 'deck')
+    numCardsToDraw <- min(length(newTargettedRows), numCards - length(targettedRows))
+    dealCardRandomly(selectedPlayer, currentGame, numCardsToDraw)
+  } else {
+    currentGame[sample(targettedRows, size=numCards)]$current_zone <- 'hand'
+    currentGame
+  }
+}
+
+shuffleDiscardIntoDeck <- function(selectedPlayer, currentGame) {
+  targettedRows <- which(currentGame$player == selectedPlayer & currentGame$current_zone == 'discard')
+  currentGame[targettedRows]$current_zone == 'deck'
   currentGame
 }
 
